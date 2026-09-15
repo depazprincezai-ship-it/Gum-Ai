@@ -38,4 +38,12 @@ def require_auth(view):
 from flask import request
 _module.require_auth = require_auth
 _spec.loader.exec_module(_module)
+
+# The Gum source computes PUBLIC_HOSTS at import time. Ensure the Render host
+# is also inserted into that already-created set after module execution. This
+# makes the allow-list work even if the source's dotenv loading or import-time
+# environment handling changes in the future.
+if _render_host:
+    _module.PUBLIC_HOSTS.add(_render_host.lower().split(":", 1)[0])
+
 app = _module.app
