@@ -5,3 +5,4 @@ groq
 openai
 Werkzeug
 gunicorn
+psycopg[binary]
