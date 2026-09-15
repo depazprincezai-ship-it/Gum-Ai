@@ -141,24 +141,105 @@ for _plugin in _EXTRA_BUILTIN_PLUGINS:
 
 app = _module.app
 
-# Desktop layout: readable but compact. Keep the app fixed to the viewport so
-# the main UI fits on one screen without the whole page becoming draggable or
-# excessively zoomed. Mobile styling is left alone.
 _DESKTOP_FONT_CSS = """
-<style id="gum-desktop-font-size">
+<style id="gum-desktop-fit">
 @media (min-width: 900px) {
-  html, body { width: 100%; height: 100%; overflow: hidden !important; }
-  body { font-size: 15px !important; }
-  .bubble { font-size: 15px !important; line-height: 1.4 !important; }
-  button, input, textarea, select { font-size: 14px !important; }
-  h1, h2, h3, h4 { line-height: 1.2 !important; }
-}
-@media (min-width: 1400px) {
-  body { font-size: 16px !important; }
-  .bubble { font-size: 16px !important; }
-  button, input, textarea, select { font-size: 15px !important; }
+  :root { width:100%; height:100%; }
+  html, body {
+    width:100% !important;
+    height:100% !important;
+    min-height:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+  }
+  body {
+    box-sizing:border-box !important;
+    font-size:18px !important;
+    line-height:1.35 !important;
+  }
+  *, *::before, *::after { box-sizing:border-box !important; }
+  button, input, textarea, select { font-size:16px !important; }
+  button { min-height:42px; }
+  .bubble { font-size:18px !important; line-height:1.4 !important; }
+  h1 { font-size:28px !important; }
+  h2 { font-size:24px !important; }
+  h3 { font-size:20px !important; }
+
+  body > * { max-height:100vh !important; }
+
+  header, nav, .header, .topbar, .top-bar, .navbar, .toolbar {
+    position:relative !important;
+    z-index:100 !important;
+    flex-shrink:0 !important;
+  }
+
+  button, input, textarea, select, a, [role="button"] {
+    position:relative;
+    z-index:101 !important;
+    pointer-events:auto !important;
+  }
+
+  main, .main, .app, .app-container, .container, .chat-container {
+    min-height:0 !important;
+  }
+
+  .messages, .message-list, .chat-messages, .chat-history, .conversation,
+  [class*="message-list"], [class*="chat-history"], [class*="messages"] {
+    min-height:0 !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+  }
+
+  form, .composer, .chat-input, .input-area, .message-input {
+    flex-shrink:0 !important;
+  }
+
+  header, nav, main, section, .header, .topbar, .toolbar {
+    max-width:100% !important;
+  }
 }
 </style>
+"""
+
+_DESKTOP_FIT_JS = """
+<script id="gum-desktop-fit-js">
+(function () {
+  function fitDesktop() {
+    if (!window.matchMedia || !window.matchMedia("(min-width: 900px)").matches) return;
+    document.documentElement.classList.add("gum-desktop");
+    document.body.classList.add("gum-desktop");
+
+    var candidates = Array.from(document.body.children);
+    var root = candidates.find(function (el) {
+      return el && el.getBoundingClientRect && el.getBoundingClientRect().height > 0;
+    });
+    if (root) {
+      root.style.height = "100vh";
+      root.style.maxHeight = "100vh";
+      root.style.minHeight = "0";
+      root.style.display = "flex";
+      root.style.flexDirection = "column";
+      root.style.overflow = "hidden";
+    }
+
+    document.querySelectorAll('button, input, textarea, select, a, [role="button"]').forEach(function (el) {
+      el.style.pointerEvents = "auto";
+      if (el.tagName === "BUTTON" || el.getAttribute("role") === "button") {
+        el.style.position = "relative";
+        el.style.zIndex = "1000";
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fitDesktop);
+  } else {
+    fitDesktop();
+  }
+  window.addEventListener("resize", fitDesktop);
+})();
+</script>
 """
 
 @app.after_request
@@ -166,8 +247,8 @@ def add_desktop_font_size(response):
     content_type = (response.headers.get("Content-Type") or "").lower()
     if "text/html" in content_type:
         html = response.get_data(as_text=True)
-        if "id=\"gum-desktop-font-size\"" not in html and "id='gum-desktop-font-size'" not in html:
+        if "id=\"gum-desktop-fit\"" not in html and "id='gum-desktop-fit'" not in html:
             if "</head>" in html:
-                html = html.replace("</head>", _DESKTOP_FONT_CSS + "</head>", 1)
+                html = html.replace("</head>", _DESKTOP_FONT_CSS + _DESKTOP_FIT_JS + "</head>", 1)
                 response.set_data(html)
     return response
