@@ -141,16 +141,22 @@ for _plugin in _EXTRA_BUILTIN_PLUGINS:
 
 app = _module.app
 
-# Desktop readability: scale the complete visible UI to 5x its previous
-# desktop sizing. Mobile styling is intentionally left untouched.
+# Desktop layout: readable but compact. Keep the app fixed to the viewport so
+# the main UI fits on one screen without the whole page becoming draggable or
+# excessively zoomed. Mobile styling is left alone.
 _DESKTOP_FONT_CSS = """
 <style id="gum-desktop-font-size">
 @media (min-width: 900px) {
-  html { font-size: 500% !important; }
-  body { font-size: 5rem !important; }
-  body * { font-size: 5em !important; }
-  .bubble { font-size: 5em !important; line-height: 1.35 !important; }
-  button, input, textarea, select { min-height: 4em !important; padding: 1em !important; }
+  html, body { width: 100%; height: 100%; overflow: hidden !important; }
+  body { font-size: 15px !important; }
+  .bubble { font-size: 15px !important; line-height: 1.4 !important; }
+  button, input, textarea, select { font-size: 14px !important; }
+  h1, h2, h3, h4 { line-height: 1.2 !important; }
+}
+@media (min-width: 1400px) {
+  body { font-size: 16px !important; }
+  .bubble { font-size: 16px !important; }
+  button, input, textarea, select { font-size: 15px !important; }
 }
 </style>
 """
