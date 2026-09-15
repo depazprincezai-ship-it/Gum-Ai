@@ -141,65 +141,46 @@ for _plugin in _EXTRA_BUILTIN_PLUGINS:
 
 app = _module.app
 
-_DESKTOP_FONT_CSS = """
-<style id="gum-desktop-fit">
+# Keep the original Gum layout intact. Only enlarge the actual desktop chat
+# controls so the composer remains usable instead of forcing every element on
+# the page to an enormous font size.
+_DESKTOP_CHAT_CSS = """
+<style id="gum-desktop-chat-size">
 @media (min-width: 900px) {
-  :root, html, body { width:100% !important; height:100% !important; min-height:100% !important; margin:0 !important; padding:0 !important; overflow:hidden !important; }
-  *, *::before, *::after { box-sizing:border-box !important; }
-  body { font-size:54px !important; line-height:1.15 !important; }
-  body p, body span, body label, body li, body td, body th, body div, body a, body .bubble { font-size:54px !important; line-height:1.2 !important; }
-  body h1 { font-size:72px !important; line-height:1.05 !important; }
-  body h2 { font-size:64px !important; line-height:1.05 !important; }
-  body h3, body h4 { font-size:58px !important; line-height:1.05 !important; }
-  button, input, textarea, select { font-size:48px !important; line-height:1.1 !important; min-height:64px !important; }
-  header, nav, .header, .topbar, .top-bar, .navbar, .toolbar { position:relative !important; z-index:9999 !important; flex-shrink:0 !important; }
-  button, input, textarea, select, a, [role="button"] { position:relative !important; z-index:10000 !important; pointer-events:auto !important; }
-  main, .main, .app, .app-container, .container, .chat-container { min-height:0 !important; max-height:100vh !important; }
-  .messages, .message-list, .chat-messages, .chat-history, .conversation, [class*="message-list"], [class*="chat-history"], [class*="messages"] { min-height:0 !important; overflow-y:auto !important; overflow-x:hidden !important; }
-  form, .composer, .chat-input, .input-area, .message-input { flex-shrink:0 !important; }
+  #userInput {
+    font-size: 30px !important;
+    line-height: 1.2 !important;
+    min-height: 64px !important;
+    padding: 14px 18px !important;
+  }
+  #sendBtn {
+    font-size: 28px !important;
+    min-height: 64px !important;
+    padding: 0 26px !important;
+  }
+  .plus-btn {
+    width: 58px !important;
+    font-size: 32px !important;
+  }
+  #modelPickerBtn {
+    font-size: 20px !important;
+    min-height: 64px !important;
+  }
+  #chat {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
 }
 </style>
 """
 
-_DESKTOP_FIT_JS = """
-<script id="gum-desktop-fit-js">
-(function () {
-  var STYLE_ID = "gum-desktop-fit";
-  var CSS = document.getElementById(STYLE_ID) ? document.getElementById(STYLE_ID).outerHTML : null;
-  function enforce() {
-    if (!window.matchMedia || !window.matchMedia("(min-width: 900px)").matches) return;
-    document.documentElement.classList.add("gum-desktop");
-    document.body.classList.add("gum-desktop");
-    var style = document.getElementById(STYLE_ID);
-    if (!style && CSS) {
-      document.head.insertAdjacentHTML("beforeend", CSS);
-    }
-    document.documentElement.style.setProperty("height", "100%", "important");
-    document.documentElement.style.setProperty("overflow", "hidden", "important");
-    document.body.style.setProperty("height", "100%", "important");
-    document.body.style.setProperty("overflow", "hidden", "important");
-  }
-  function start() {
-    enforce();
-    if (window.MutationObserver) {
-      var observer = new MutationObserver(function () { enforce(); });
-      observer.observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:["class","style"]});
-    }
-    window.addEventListener("resize", enforce, {passive:true});
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, {once:true});
-  else start();
-})();
-</script>
-"""
-
 @app.after_request
-def add_desktop_font_size(response):
+def add_desktop_chat_size(response):
     content_type = (response.headers.get("Content-Type") or "").lower()
     if "text/html" in content_type:
         html = response.get_data(as_text=True)
-        if "id=\"gum-desktop-fit\"" not in html and "id='gum-desktop-fit'" not in html:
+        if "id=\"gum-desktop-chat-size\"" not in html and "id='gum-desktop-chat-size'" not in html:
             if "</head>" in html:
-                html = html.replace("</head>", _DESKTOP_FONT_CSS + _DESKTOP_FIT_JS + "</head>", 1)
+                html = html.replace("</head>", _DESKTOP_CHAT_CSS + "</head>", 1)
                 response.set_data(html)
     return response
