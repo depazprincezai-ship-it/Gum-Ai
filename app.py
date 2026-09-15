@@ -47,3 +47,34 @@ if _render_host:
     _module.PUBLIC_HOSTS.add(_render_host.lower().split(":", 1)[0])
 
 app = _module.app
+
+# Desktop readability: keep the existing mobile sizing untouched, while
+# making Gum's main chat bubbles noticeably easier to read on wider screens.
+# The main Gum UI already uses --base-font-size for chat bubbles, so we can
+# adjust that token here without changing the underlying source template.
+_DESKTOP_FONT_CSS = """
+<style id="gum-desktop-font-size">
+@media (min-width: 900px) {
+  body[data-font="small"] { --base-font-size: 16px !important; }
+  body[data-font="medium"] { --base-font-size: 18px !important; }
+  body[data-font="large"] { --base-font-size: 20px !important; }
+  .bubble { font-size: var(--base-font-size) !important; }
+}
+@media (min-width: 1400px) {
+  body[data-font="small"] { --base-font-size: 17px !important; }
+  body[data-font="medium"] { --base-font-size: 19px !important; }
+  body[data-font="large"] { --base-font-size: 21px !important; }
+}
+</style>
+"""
+
+@app.after_request
+def add_desktop_font_size(response):
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if "text/html" in content_type:
+        html = response.get_data(as_text=True)
+        if "id=\"gum-desktop-font-size\"" not in html and "id='gum-desktop-font-size'" not in html:
+            if "</head>" in html:
+                html = html.replace("</head>", _DESKTOP_FONT_CSS + "</head>", 1)
+                response.set_data(html)
+    return response
