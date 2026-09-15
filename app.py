@@ -144,60 +144,19 @@ app = _module.app
 _DESKTOP_FONT_CSS = """
 <style id="gum-desktop-fit">
 @media (min-width: 900px) {
-  :root { width:100%; height:100%; }
-  html, body {
-    width:100% !important;
-    height:100% !important;
-    min-height:100% !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:hidden !important;
-  }
-  body {
-    box-sizing:border-box !important;
-    font-size:18px !important;
-    line-height:1.35 !important;
-  }
+  :root, html, body { width:100% !important; height:100% !important; min-height:100% !important; margin:0 !important; padding:0 !important; overflow:hidden !important; }
   *, *::before, *::after { box-sizing:border-box !important; }
-  button, input, textarea, select { font-size:16px !important; }
-  button { min-height:42px; }
-  .bubble { font-size:18px !important; line-height:1.4 !important; }
-  h1 { font-size:28px !important; }
-  h2 { font-size:24px !important; }
-  h3 { font-size:20px !important; }
-
-  body > * { max-height:100vh !important; }
-
-  header, nav, .header, .topbar, .top-bar, .navbar, .toolbar {
-    position:relative !important;
-    z-index:100 !important;
-    flex-shrink:0 !important;
-  }
-
-  button, input, textarea, select, a, [role="button"] {
-    position:relative;
-    z-index:101 !important;
-    pointer-events:auto !important;
-  }
-
-  main, .main, .app, .app-container, .container, .chat-container {
-    min-height:0 !important;
-  }
-
-  .messages, .message-list, .chat-messages, .chat-history, .conversation,
-  [class*="message-list"], [class*="chat-history"], [class*="messages"] {
-    min-height:0 !important;
-    overflow-y:auto !important;
-    overflow-x:hidden !important;
-  }
-
-  form, .composer, .chat-input, .input-area, .message-input {
-    flex-shrink:0 !important;
-  }
-
-  header, nav, main, section, .header, .topbar, .toolbar {
-    max-width:100% !important;
-  }
+  body { font-size:54px !important; line-height:1.15 !important; }
+  body p, body span, body label, body li, body td, body th, body div, body a, body .bubble { font-size:54px !important; line-height:1.2 !important; }
+  body h1 { font-size:72px !important; line-height:1.05 !important; }
+  body h2 { font-size:64px !important; line-height:1.05 !important; }
+  body h3, body h4 { font-size:58px !important; line-height:1.05 !important; }
+  button, input, textarea, select { font-size:48px !important; line-height:1.1 !important; min-height:64px !important; }
+  header, nav, .header, .topbar, .top-bar, .navbar, .toolbar { position:relative !important; z-index:9999 !important; flex-shrink:0 !important; }
+  button, input, textarea, select, a, [role="button"] { position:relative !important; z-index:10000 !important; pointer-events:auto !important; }
+  main, .main, .app, .app-container, .container, .chat-container { min-height:0 !important; max-height:100vh !important; }
+  .messages, .message-list, .chat-messages, .chat-history, .conversation, [class*="message-list"], [class*="chat-history"], [class*="messages"] { min-height:0 !important; overflow-y:auto !important; overflow-x:hidden !important; }
+  form, .composer, .chat-input, .input-area, .message-input { flex-shrink:0 !important; }
 }
 </style>
 """
@@ -205,39 +164,31 @@ _DESKTOP_FONT_CSS = """
 _DESKTOP_FIT_JS = """
 <script id="gum-desktop-fit-js">
 (function () {
-  function fitDesktop() {
+  var STYLE_ID = "gum-desktop-fit";
+  var CSS = document.getElementById(STYLE_ID) ? document.getElementById(STYLE_ID).outerHTML : null;
+  function enforce() {
     if (!window.matchMedia || !window.matchMedia("(min-width: 900px)").matches) return;
     document.documentElement.classList.add("gum-desktop");
     document.body.classList.add("gum-desktop");
-
-    var candidates = Array.from(document.body.children);
-    var root = candidates.find(function (el) {
-      return el && el.getBoundingClientRect && el.getBoundingClientRect().height > 0;
-    });
-    if (root) {
-      root.style.height = "100vh";
-      root.style.maxHeight = "100vh";
-      root.style.minHeight = "0";
-      root.style.display = "flex";
-      root.style.flexDirection = "column";
-      root.style.overflow = "hidden";
+    var style = document.getElementById(STYLE_ID);
+    if (!style && CSS) {
+      document.head.insertAdjacentHTML("beforeend", CSS);
     }
-
-    document.querySelectorAll('button, input, textarea, select, a, [role="button"]').forEach(function (el) {
-      el.style.pointerEvents = "auto";
-      if (el.tagName === "BUTTON" || el.getAttribute("role") === "button") {
-        el.style.position = "relative";
-        el.style.zIndex = "1000";
-      }
-    });
+    document.documentElement.style.setProperty("height", "100%", "important");
+    document.documentElement.style.setProperty("overflow", "hidden", "important");
+    document.body.style.setProperty("height", "100%", "important");
+    document.body.style.setProperty("overflow", "hidden", "important");
   }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", fitDesktop);
-  } else {
-    fitDesktop();
+  function start() {
+    enforce();
+    if (window.MutationObserver) {
+      var observer = new MutationObserver(function () { enforce(); });
+      observer.observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:["class","style"]});
+    }
+    window.addEventListener("resize", enforce, {passive:true});
   }
-  window.addEventListener("resize", fitDesktop);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, {once:true});
+  else start();
 })();
 </script>
 """
