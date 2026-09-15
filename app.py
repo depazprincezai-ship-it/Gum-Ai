@@ -9,10 +9,6 @@ if _spec is None or _spec.loader is None:
     raise ImportError(f"Unable to load {_source}")
 _module = importlib.util.module_from_spec(_spec)
 
-# Render automatically provides RENDER_EXTERNAL_HOSTNAME (for example,
-# gum-ai.onrender.com). Pass that hostname into Gum's host allow-list before
-# the source module is executed, so Render requests are accepted without
-# hard-coding the deployment hostname in the repository.
 _render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
 _configured_hosts = os.environ.get("GUM_PUBLIC_HOSTS", "").strip()
 if _render_host:
@@ -20,9 +16,6 @@ if _render_host:
         host for host in (_configured_hosts, _render_host) if host
     )
 
-# gum_v6 references require_auth as a route decorator, but that decorator
-# was missing from the generated source. Provide the secure adapter before
-# executing the module so the app can boot without exposing protected routes.
 def require_auth(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -37,18 +30,9 @@ from flask import request
 _module.require_auth = require_auth
 _spec.loader.exec_module(_module)
 
-# The Gum source computes PUBLIC_HOSTS at import time. Ensure the Render host
-# is also inserted into that already-created set after module execution.
 if _render_host:
     _module.PUBLIC_HOSTS.add(_render_host.lower().split(":", 1)[0])
 
-# ---------------------------------------------------------------------------
-# Durable storage
-# ---------------------------------------------------------------------------
-# Render Free services have an ephemeral filesystem, so Gum's JSON/SQLite
-# files are not permanent across redeploys. If DATABASE_URL is configured,
-# use Postgres for accounts and user-created plugins. Without it, keep the
-# existing local-file behavior so local development still works.
 try:
     import gum_persistence
 except ImportError:
@@ -84,14 +68,7 @@ if gum_persistence and gum_persistence.ENABLED:
     except Exception as exc:
         print(f"[gum] durable storage unavailable: {exc}")
 
-# ---------------------------------------------------------------------------
-# AI-visible plugin context
-# ---------------------------------------------------------------------------
-# Plugins are browser-sandboxed HTML apps. They cannot safely be executed by
-# the model/server, but Gum can inject the installed plugin catalog into every
-# AI call so the assistant knows which plugins exist and can recommend them.
 _original_call_ai_provider = _module.call_ai_provider
-
 
 def _plugin_ai_context():
     try:
@@ -111,7 +88,6 @@ def _plugin_ai_context():
     lines.append("Do not claim to have executed a plugin unless the application explicitly reports that it ran.")
     return "\n".join(lines)
 
-
 def call_ai_provider_with_plugins(provider, model, messages, temperature=1.0):
     plugin_context = _plugin_ai_context()
     if plugin_context:
@@ -125,9 +101,6 @@ def call_ai_provider_with_plugins(provider, model, messages, temperature=1.0):
 
 _module.call_ai_provider = call_ai_provider_with_plugins
 
-# ---------------------------------------------------------------------------
-# More permanent built-in plugins
-# ---------------------------------------------------------------------------
 _EXTRA_BUILTIN_PLUGINS = [
     {
         "id": "builtin-calculator",
@@ -168,20 +141,16 @@ for _plugin in _EXTRA_BUILTIN_PLUGINS:
 
 app = _module.app
 
-# Desktop readability: keep the existing mobile sizing untouched, while
-# making Gum's main chat bubbles noticeably easier to read on wider screens.
+# Desktop readability: scale the complete visible UI to 5x its previous
+# desktop sizing. Mobile styling is intentionally left untouched.
 _DESKTOP_FONT_CSS = """
 <style id="gum-desktop-font-size">
 @media (min-width: 900px) {
-  body[data-font="small"] { --base-font-size: 16px !important; }
-  body[data-font="medium"] { --base-font-size: 18px !important; }
-  body[data-font="large"] { --base-font-size: 20px !important; }
-  .bubble { font-size: var(--base-font-size) !important; }
-}
-@media (min-width: 1400px) {
-  body[data-font="small"] { --base-font-size: 17px !important; }
-  body[data-font="medium"] { --base-font-size: 19px !important; }
-  body[data-font="large"] { --base-font-size: 21px !important; }
+  html { font-size: 500% !important; }
+  body { font-size: 5rem !important; }
+  body * { font-size: 5em !important; }
+  .bubble { font-size: 5em !important; line-height: 1.35 !important; }
+  button, input, textarea, select { min-height: 4em !important; padding: 1em !important; }
 }
 </style>
 """
